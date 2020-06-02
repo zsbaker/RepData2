@@ -5,7 +5,7 @@ date: "01/06/2020"
 output: 
   html_document:
    theme: paper
-   highlight: pygments
+   highlight: textmate
    toc: true
    toc_float: true
 ---
@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### Synopsis
 
-[NOAA (National Oceanic & Atmospheric Administration)](https://www.ncdc.noaa.gov/data-access) is the world's largest provider of weather and climate data. In particular with severe weather events such as blizzards and tornadoes, the [Storm Events Database](https://www.ncdc.noaa.gov/stormevents/) collects information on significant weather phenomena, dating back to January 1950. The following report aims to answer questions on the types of events that have caused the greatest health and economic impact since such time. 
+NOAA (National Oceanic & Atmospheric Administration) is the world's largest provider of weather and climate data. In particular with severe weather events such as blizzards and tornadoes, the [Storm Events Database](https://www.ncdc.noaa.gov/stormevents/) collects information on significant weather phenomena, dating back to January 1950. The following report aims to answer questions on the types of events that have caused the greatest health and economic impact since such time. 
 
 
 ### Data Processing
@@ -37,23 +37,27 @@ library(dplyr)
 
 ##### Read Storm Data and Process  
 
-```{r results="hide", cache=TRUE}
+```{r results="hide", cache=FALSE}
+
 csv_name <- "repdata_data_StormData.csv.bz2"
 
 # Read file
 storm_data <-fread(csv_name)
 
-# Format date and time variables
+# Format date variables
 storm_data <- storm_data[,BDate := as.POSIXct(word(BGN_DATE,1), format = "%m/%d/%Y")]
-storm_data <- storm_data[,BTime := paste0(str_sub(as.character(BGN_TIME),1,2),":", str_sub(as.character(BGN_TIME),-2,-1))]
 
+# Reduce dataset to 1996 onwards
+storm_data <- storm_data[format(BDate, "%Y")> 1995,]
+
+# Tally Damage from property and crops
 storm_data$TotalDamage <- 
          ifelse(storm_data$PROPDMGEXP=="M", storm_data$PROPDMG*1000000, ifelse(storm_data$PROPDMGEXP=="K", storm_data$PROPDMG*1000,0)) +
          ifelse(storm_data$CROPDMGEXP=="M", storm_data$CROPDMG*1000000, ifelse(storm_data$CROPDMGEXP=="K", storm_data$CROPDMG*1000,0))
 
-
-
 ```
+
+
 
 
 ### Storm Data Questions  
@@ -61,7 +65,7 @@ storm_data$TotalDamage <-
 #### Question 1
 1) Across the United States, which types of events (as indicated in the \color{red}{\verb|EVTYPE|}EVTYPE variable) are most harmful with respect to population health?
 
-```{r cache=TRUE}
+```{r}
 
 # Group By Fatalities
 data_agg_deaths <- storm_data %>% 
@@ -71,7 +75,7 @@ mutate(Year = format(BDate, "%Y")) %>% group_by(EVTYPE) %>% summarise(total = su
 data_agg_deaths <- data_agg_deaths[data_agg_deaths$total > 0,]
 data_agg_deaths <- data_agg_deaths %>% arrange(desc(total))
 
-# EVtypes from top 5% of total deaths between 1950-2011
+# EVtypes from top 5% of total deaths between 1996-2011
 top_data_agg_deaths <- data_agg_deaths[data_agg_deaths$total > quantile(data_agg_deaths$total, prob=1-5/100),]
 
 colnames(top_data_agg_deaths) <- c("EventType", "Total")
@@ -84,7 +88,7 @@ mutate(Year = format(BDate, "%Y")) %>% group_by(EVTYPE) %>% summarise(total = su
 data_agg_injured <- data_agg_injured[data_agg_injured$total > 0,]
 data_agg_injured <- data_agg_injured %>% arrange(desc(total))
 
-# EVtypes from top 5% of total injuries between 1950-2011
+# EVtypes from top 5% of total injuries between 1996-2011
 top_data_agg_injured <- data_agg_injured[data_agg_injured$total > quantile(data_agg_injured$total, prob=1-5/100),]
 
 colnames(top_data_agg_injured) <- c("EventType", "Total")
@@ -97,7 +101,7 @@ colnames(top_data_agg_injured) <- c("EventType", "Total")
 ```{r }
 
 
-barplot(table(top_data_agg_deaths$EventType), height=top_data_agg_deaths$Total, names=top_data_agg_deaths$EventType, col=rainbow(length(top_data_agg_deaths$EventType)), cex.name=0.5, cex.axis = 0.75, las=2, horiz=T, main="U.S. Fatalities by Event Type Between 1950-2011")
+barplot(table(top_data_agg_deaths$EventType), height=top_data_agg_deaths$Total, names=top_data_agg_deaths$EventType, col=rainbow(length(top_data_agg_deaths$EventType)), cex.name=0.5, cex.axis = 0.75, las=2, horiz=T, main="U.S. Fatalities by Event Type Between 1996-2011")
 
 
 
@@ -109,7 +113,7 @@ barplot(table(top_data_agg_deaths$EventType), height=top_data_agg_deaths$Total, 
 ```{r}
 
 
-barplot(table(top_data_agg_injured$EventType), height=top_data_agg_injured$Total, names=top_data_agg_injured$EventType, col=rainbow(length(top_data_agg_injured$EventType)), cex.name=0.5, cex.axis = 0.75, las=2, horiz=T, main="U.S. Injuries by Event Type Between 1950-2011")
+barplot(table(top_data_agg_injured$EventType), height=top_data_agg_injured$Total, names=top_data_agg_injured$EventType, col=rainbow(length(top_data_agg_injured$EventType)), cex.name=0.5, cex.axis = 0.75, las=2, horiz=T, main="U.S. Injuries by Event Type Between 1996-2011")
 
 
 
@@ -132,7 +136,7 @@ mutate(Year = format(BDate, "%Y")) %>% group_by(EVTYPE) %>% summarise(total = su
 data_agg_damages <- data_agg_damages[data_agg_damages$total > 0,]
 data_agg_damages <- data_agg_damages %>% arrange(desc(total))
 
-# EVtypes from top 5% of total damages between 1950-2011
+# EVtypes from top 5% of total damages between 1996-2011
 top_data_agg_damages <- data_agg_damages[data_agg_damages$total > quantile(data_agg_damages$total, prob=1-5/100),]
 
 
@@ -151,7 +155,7 @@ colnames(top_data_agg_damages) <- c("EventType", "USD_BILLIONS")
 
 ```{r}
 
-barplot(table(top_data_agg_damages$EventType), height=top_data_agg_damages$USD_BILLIONS, names=top_data_agg_damages$EventType, col=rainbow(length(top_data_agg_damages$EventType)), cex.name=0.5, cex.axis = 0.75, las=2, horiz=T, main="Economic Impact by Event Type Between 1950-2011 (In USD Billions)")
+barplot(table(top_data_agg_damages$EventType), height=top_data_agg_damages$USD_BILLIONS, names=top_data_agg_damages$EventType, col=rainbow(length(top_data_agg_damages$EventType)), cex.name=0.5, cex.axis = 0.75, las=2, horiz=T, main="Economic Impact by Event Type Between 1996-2011 (In USD Billions)")
 
 ```
 
