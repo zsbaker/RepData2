@@ -1,0 +1,142 @@
+---
+title: "NOAAData"
+author: "Zack"
+date: "01/06/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Loading Data  
+
+```{r results="hide", warning=FALSE, message=FALSE}
+library(data.table)
+library(stringr)
+library(dplyr)
+library(ggplot2)
+
+```
+
+
+Read Storm Data and Process  
+
+```{r results="hide", cache=FALSE}
+csv_name <- "repdata_data_StormData.csv.bz2"
+
+# Read file
+storm_data <-fread(csv_name)
+
+# Format date and time variables
+storm_data <- storm_data[,BDate := as.POSIXct(word(BGN_DATE,1), format = "%m/%d/%Y")]
+storm_data <- storm_data[,BTime := paste0(str_sub(as.character(BGN_TIME),1,2),":", str_sub(as.character(BGN_TIME),-2,-1))]
+
+storm_data$TotalDamage <- 
+         ifelse(storm_data$PROPDMGEXP=="M", storm_data$PROPDMG*1000000, ifelse(storm_data$PROPDMGEXP=="K", storm_data$PROPDMG*1000,0)) +
+         ifelse(storm_data$CROPDMGEXP=="M", storm_data$CROPDMG*1000000, ifelse(storm_data$CROPDMGEXP=="K", storm_data$CROPDMG*1000,0))
+
+
+
+```
+
+
+##### Storm Data Questions  
+
+
+1) Across the United States, which types of events (as indicated in the \color{red}{\verb|EVTYPE|}EVTYPE variable) are most harmful with respect to population health?
+
+```{r cache=FALSE}
+
+# Group By Fatalities
+data_agg_deaths <- storm_data %>% 
+mutate(Year = format(BDate, "%Y")) %>% group_by(EVTYPE) %>% summarise(total = sum(FATALITIES))
+
+# Arrange and Remove zero totals
+data_agg_deaths <- data_agg_deaths[data_agg_deaths$total > 0,]
+data_agg_deaths <- data_agg_deaths %>% arrange(desc(total))
+
+# EVtypes from top 5% of total deaths between 1950-2011
+top_data_agg_deaths <- data_agg_deaths[data_agg_deaths$total > quantile(data_agg_deaths$total, prob=1-5/100),]
+
+colnames(top_data_agg_deaths) <- c("EventType", "Total")
+
+# Group By Injuries
+data_agg_injured <- storm_data %>% 
+mutate(Year = format(BDate, "%Y")) %>% group_by(EVTYPE) %>% summarise(total = sum(INJURIES))
+
+# Arrange and Remove zero totals
+data_agg_injured <- data_agg_injured[data_agg_injured$total > 0,]
+data_agg_injured <- data_agg_injured %>% arrange(desc(total))
+
+# EVtypes from top 5% of total injuries between 1950-2011
+top_data_agg_injured <- data_agg_injured[data_agg_injured$total > quantile(data_agg_injured$total, prob=1-5/100),]
+
+colnames(top_data_agg_injured) <- c("EventType", "Total")
+
+```
+
+
+Plot Fatalities by EV Types
+
+```{r}
+
+
+barplot(table(top_data_agg_deaths$EventType), height=top_data_agg_deaths$Total, names=top_data_agg_deaths$EventType, col=rainbow(length(top_data_agg_deaths$EventType)), cex.name=0.5, cex.axis = 0.75, las=2, horiz=T, main="U.S. Fatalities by Event Type Between 1950-2011")
+
+
+
+```
+
+
+Plot Injuries by EV Types
+
+```{r}
+
+
+barplot(table(top_data_agg_injured$EventType), height=top_data_agg_injured$Total, names=top_data_agg_injured$EventType, col=rainbow(length(top_data_agg_injured$EventType)), cex.name=0.5, cex.axis = 0.75, las=2, horiz=T, main="U.S. Injuries by Event Type Between 1950-2011")
+
+
+
+```
+
+
+2) Across the United States, which types of events have the greatest economic consequences?  
+
+
+```{r}
+
+
+
+# Group By Damages
+data_agg_damages <- storm_data %>% 
+mutate(Year = format(BDate, "%Y")) %>% group_by(EVTYPE) %>% summarise(total = sum(TotalDamage))
+
+# Arrange and Remove zero totals
+data_agg_damages <- data_agg_damages[data_agg_damages$total > 0,]
+data_agg_damages <- data_agg_damages %>% arrange(desc(total))
+
+# EVtypes from top 5% of total damages between 1950-2011
+top_data_agg_damages <- data_agg_damages[data_agg_damages$total > quantile(data_agg_damages$total, prob=1-5/100),]
+
+
+top_data_agg_damages$total <- top_data_agg_damages$total/1000000000
+
+top_data_agg_damages$total <- format(round(top_data_agg_damages$total,2), nsmall=2)
+
+top_data_agg_damages$total <- as.numeric(top_data_agg_damages$total)
+
+colnames(top_data_agg_damages) <- c("EventType", "USD_BILLIONS")
+
+```
+
+
+Plot Economic Impact ($)
+
+```{r}
+
+barplot(table(top_data_agg_damages$EventType), height=top_data_agg_damages$USD_BILLIONS, names=top_data_agg_damages$EventType, col=rainbow(length(top_data_agg_damages$EventType)), cex.name=0.5, cex.axis = 0.75, las=2, horiz=T, main="Economic Impact by Event Type Between 1950-2011 (In USD Billions)")
+
+```
+
