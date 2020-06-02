@@ -1,29 +1,43 @@
 ---
-title: "NOAAData"
-author: "Zack"
+title: "Severe Weather Events Visualized"
+author: "Zack Baker"
 date: "01/06/2020"
-output: html_document
+output: 
+  html_document:
+   theme: paper
+   highlight: pygments
+   toc: true
+   toc_float: true
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+### Synopsis
 
-Loading Data  
+[NOAA (National Oceanic & Atmospheric Administration)](https://www.ncdc.noaa.gov/data-access) is the world's largest provider of weather and climate data. In particular with severe weather events such as blizzards and tornadoes, the [Storm Events Database](https://www.ncdc.noaa.gov/stormevents/) collects information on significant weather phenomena, dating back to January 1950. The following report aims to answer questions on the types of events that have caused the greatest health and economic impact since such time. 
+
+
+### Data Processing
+
+Note: From Jan 1950 to Dec 1995, only Tornado, Thunderstorm Wind and Hail had been recorded as Severe weather events. As such, to depict a true picture of impact for all 48 event types, the dataset will be from 1996 to 2011.
+
+
+
+##### Required R Libraries
 
 ```{r results="hide", warning=FALSE, message=FALSE}
 library(data.table)
 library(stringr)
 library(dplyr)
-library(ggplot2)
 
 ```
 
 
-Read Storm Data and Process  
+##### Read Storm Data and Process  
 
-```{r results="hide", cache=FALSE}
+```{r results="hide", cache=TRUE}
 csv_name <- "repdata_data_StormData.csv.bz2"
 
 # Read file
@@ -42,12 +56,12 @@ storm_data$TotalDamage <-
 ```
 
 
-##### Storm Data Questions  
+### Storm Data Questions  
 
-
+#### Question 1
 1) Across the United States, which types of events (as indicated in the \color{red}{\verb|EVTYPE|}EVTYPE variable) are most harmful with respect to population health?
 
-```{r cache=FALSE}
+```{r cache=TRUE}
 
 # Group By Fatalities
 data_agg_deaths <- storm_data %>% 
@@ -78,9 +92,9 @@ colnames(top_data_agg_injured) <- c("EventType", "Total")
 ```
 
 
-Plot Fatalities by EV Types
+##### Plot Fatalities by EV Types
 
-```{r}
+```{r }
 
 
 barplot(table(top_data_agg_deaths$EventType), height=top_data_agg_deaths$Total, names=top_data_agg_deaths$EventType, col=rainbow(length(top_data_agg_deaths$EventType)), cex.name=0.5, cex.axis = 0.75, las=2, horiz=T, main="U.S. Fatalities by Event Type Between 1950-2011")
@@ -90,7 +104,7 @@ barplot(table(top_data_agg_deaths$EventType), height=top_data_agg_deaths$Total, 
 ```
 
 
-Plot Injuries by EV Types
+##### Plot Injuries by EV Types
 
 ```{r}
 
@@ -102,6 +116,7 @@ barplot(table(top_data_agg_injured$EventType), height=top_data_agg_injured$Total
 ```
 
 
+#### Question 2
 2) Across the United States, which types of events have the greatest economic consequences?  
 
 
@@ -132,7 +147,7 @@ colnames(top_data_agg_damages) <- c("EventType", "USD_BILLIONS")
 ```
 
 
-Plot Economic Impact ($)
+##### Plot Economic Impact ($)
 
 ```{r}
 
