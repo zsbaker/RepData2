@@ -21,7 +21,7 @@ NOAA (National Oceanic & Atmospheric Administration) is the world's largest prov
 
 ### Data Processing
 
-Note: From Jan 1950 to Dec 1995, only Tornado, Thunderstorm Wind and Hail had been recorded as Severe weather events. As such, to depict a true picture of impact for all 48 event types, the dataset will be from 1996 to 2011.
+Note: According to the [Storm Events Database Details Link](https://www.ncdc.noaa.gov/stormevents/details.jsp); From Jan 1950 to Dec 1995, only Tornado, Thunderstorm Wind and Hail had been recorded as Severe weather events. As such, to depict a true picture of impact for all 48 event types, the dataset will be from 1996 to 2011.
 
 
 
@@ -50,17 +50,66 @@ storm_data <- storm_data[,BDate := as.POSIXct(word(BGN_DATE,1), format = "%m/%d/
 # Reduce dataset to 1996 onwards
 storm_data <- storm_data[format(BDate, "%Y")> 1995,]
 
+```
+
+
+##### Analyze Data Structure
+```{r}
+
+str(storm_data)
+
+```
+
+##### Review Property Damage Exponents
+```{r}
+
+unique(storm_data$PROPDMGEXP)
+
+```
+
+##### Review Crop Damage Exponents
+```{r}
+
+unique(storm_data$CROPDMGEXP)
+
+```
+
+
+##### Translate Damage Exponents
+
+```{r}
+
+
+# PROP cONVERT ALL CHARACTERS TO A NUMBER EXPONENT
+storm_data$PROPDMG2 <- ifelse(storm_data$PROPDMGEXP=="B", 9, 
+                              ifelse(storm_data$PROPDMGEXP=="M", 6,
+                                     ifelse(storm_data$PROPDMGEXP=="K", 6,
+                                            ifelse(storm_data$PROPDMGEXP=="", 0,storm_data$PROPDMGEXP))))
+
+
+# CROP cONVERT ALL CHARACTERS TO A NUMBER EXPONENT
+storm_data$CROPDMG2 <- ifelse(storm_data$CROPDMGEXP=="B", 9, 
+                              ifelse(storm_data$CROPDMGEXP=="M", 6,
+                                     ifelse(storm_data$CROPDMGEXP=="K", 3,
+                                                          ifelse(storm_data$CROPDMGEXP=="-", 0,
+                                                                 ifelse(storm_data$CROPDMGEXP=="", 0,
+                                                                        ifelse(storm_data$CROPDMGEXP=="?", 0,storm_data$CROPDMGEXP))))))
+
+
+                                                                               
+
+
 # Tally Damage from property and crops
-storm_data$TotalDamage <- 
-         ifelse(storm_data$PROPDMGEXP=="M", storm_data$PROPDMG*1000000, ifelse(storm_data$PROPDMGEXP=="K", storm_data$PROPDMG*1000,0)) +
-         ifelse(storm_data$CROPDMGEXP=="M", storm_data$CROPDMG*1000000, ifelse(storm_data$CROPDMGEXP=="K", storm_data$CROPDMG*1000,0))
+storm_data$TotalDamage <- storm_data$PROPDMG*10^(as.numeric(storm_data$PROPDMG2)) + storm_data$CROPDMG*10^(as.numeric(storm_data$CROPDMG2))
+         
+        
+
 
 ```
 
 
 
-
-### Storm Data Questions  
+### Results  
 
 #### Question 1
 1) Across the United States, which types of events (as indicated in the \color{red}{\verb|EVTYPE|}EVTYPE variable) are most harmful with respect to population health?
